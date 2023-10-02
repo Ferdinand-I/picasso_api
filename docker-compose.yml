@@ -1,0 +1,36 @@
+version: '2.7'
+
+services:
+  rabbit:
+    image: rabbitmq:latest
+    restart: always
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+
+  dajngo:
+    build: .
+    container_name: django_picasso_api
+    volumes:
+      - media:/app/picasso_api/media/
+    restart: on-failure
+    ports:
+      - "8000:8000"
+    tty: true
+    command:
+      bash -c "python manage.py migrate file_hosting_api && python manage.py runserver 0.0.0.0:8000"
+
+  worker:
+    restart: always
+    build:
+      context: .
+    environment:
+      C_FORCE_ROOT: 'true'
+    depends_on:
+      - rabbit
+    command:
+      bash -c "celery -A picasso_api worker -l INFO"
+
+
+volumes:
+  media:
